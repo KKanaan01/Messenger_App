@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Socket.IO Test</title>
+  </head>
+  <body>
+    <h1>Socket.IO Test</h1>
+    <p>Open console to see messages</p>
+
+    <!-- Load Socket.IO client library -->
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+
+    <script>
+      // Replace 192.168.1.100 with your PC's IP
+      const socket = io("http://something:3001");
+
+      // Send a test message
+      socket.emit("send_message", "Hello from phone!");
+
+      // Listen for incoming messages
+      socket.on("receive_message", (msg) => {
+        console.log("Message received:", msg);
+        alert("Message received: " + msg); // optional pop-up for testing
+      });
+    </script>
+  </body>
+</html>
