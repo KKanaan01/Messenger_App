@@ -1,0 +1,153 @@
+:root{
+  --bg:#0b1220;
+  --panel:#0f172a;
+  --panel2:#0b1326;
+  --text:#e5e7eb;
+  --muted:#9ca3af;
+  --border:rgba(255,255,255,.09);
+  --accent:#60a5fa;
+  --me:#1d4ed8;
+  --meText:#eaf2ff;
+  --other:#111c33;
+}
+
+*{ box-sizing:border-box; }
+
+body{
+  margin:0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  min-height:100vh;
+  display:grid;
+  place-items:center;
+  padding:24px;
+
+  background:
+    radial-gradient(1100px 700px at 20% 10%, rgba(96,165,250,.18), transparent 60%),
+    radial-gradient(900px 600px at 80% 20%, rgba(16,185,129,.10), transparent 60%),
+    linear-gradient(180deg, #071022, #050a14);
+  color:var(--text);
+}
+
+.wrap{
+  width:min(900px, 92vw);
+  background: linear-gradient(180deg, rgba(15,23,42,.92), rgba(11,19,38,.92));
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:18px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.55);
+}
+
+h2{
+  margin:0 0 6px;
+  letter-spacing:.2px;
+}
+
+.meta{
+  color:var(--muted);
+  font-size:13px;
+  margin-bottom:14px;
+}
+
+/* --- Chat area --- */
+#chat{
+  height: clamp(320px, 52vh, 540px);  /* key: not insanely tall */
+  overflow:auto;
+  padding:14px;
+  border-radius:14px;
+  background: rgba(0,0,0,.18);
+  border:1px solid var(--border);
+}
+
+/* Message bubbles */
+.bubble{
+  max-width: 78%;
+  padding:10px 12px;
+  border-radius:14px;
+  margin:10px 0;
+  background: rgba(255,255,255,.06);
+  border:1px solid var(--border);
+}
+
+.bubble .who{
+  font-weight:800;
+  margin-right:8px;
+  color: var(--accent);
+}
+
+/* "me" messages align right and look different */
+.bubble.me{
+  margin-left:auto;
+  background: rgba(29,78,216,.25);
+  border-color: rgba(96,165,250,.35);
+}
+
+.bubble.me .who{
+  color: #93c5fd;
+}
+
+/* timestamp tucked in */
+.bubble .meta{
+  margin-top:6px;
+  font-size:11px;
+  color: rgba(229,231,235,.6);
+}
+
+.system{
+  margin:10px 0;
+  color: rgba(229,231,235,.75);
+  font-style: italic;
+}
+
+/* --- Inputs --- */
+.row{
+  display:grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap:10px;
+  margin-top:12px;
+}
+
+.row:last-of-type{
+  grid-template-columns: 1fr auto; /* message + send */
+}
+
+input, button{
+  height:42px;              /* key: consistent height */
+  font-size:14px;
+  padding:0 12px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  outline:none;
+}
+
+input{
+  background: rgba(255,255,255,.05);
+  color:var(--text);
+}
+
+input::placeholder{
+  color: rgba(229,231,235,.5);
+}
+
+input:focus{
+  border-color: rgba(96,165,250,.45);
+  box-shadow: 0 0 0 4px rgba(96,165,250,.12);
+}
+
+button{
+  padding:0 16px;
+  background: linear-gradient(180deg, rgba(96,165,250,.95), rgba(59,130,246,.95));
+  color:#06101f;
+  font-weight:800;
+  cursor:pointer;
+  transition: transform .05s ease, filter .15s ease;
+}
+
+button:hover{ filter: brightness(1.05); }
+button:active{ transform: translateY(1px); }
+
+#chat::-webkit-scrollbar{ width:10px; }
+#chat::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,.12);
+  border-radius:10px;
+}
+#chat::-webkit-scrollbar-thumb:hover{ background: rgba(255,255,255,.18); }

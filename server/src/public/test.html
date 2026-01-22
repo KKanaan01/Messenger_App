@@ -4,20 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Socket.IO Test Chat</title>
-    <style>
-      body { font-family: Arial, sans-serif; margin: 16px; }
-      .wrap { max-width: 700px; margin: 0 auto; }
-      .row { display: flex; gap: 8px; margin-top: 10px; }
-      input, button { padding: 10px; font-size: 16px; }
-      #room, #name { width: 160px; }
-      #msg { flex: 1; }
-      #chat { border: 1px solid #ccc; border-radius: 8px; padding: 10px; height: 55vh; overflow: auto; }
-      .meta { color: #666; font-size: 12px; margin-bottom: 6px; }
-      .bubble { padding: 8px 10px; border-radius: 10px; margin: 6px 0; background: #f3f3f3; }
-      .bubble.me { background: #e8f0ff; }
-      .bubble .who { font-weight: bold; margin-right: 6px; }
-      .system { color: #444; font-style: italic; margin: 8px 0; }
-    </style>
+    <link href="./styles.css" rel="stylesheet">
   </head>
 
   <body>
@@ -28,7 +15,6 @@
       </div>
 
       <div id="chat"></div>
-
       <div class="row">
         <input id="name" placeholder="Name (ex: Batman)" />
         <input id="room" placeholder="Room (ex: lobby)" value="lobby" />
@@ -40,112 +26,8 @@
         <button id="sendBtn">Send</button>
       </div>
     </div>
-
     <!-- Socket.IO client served by your server automatically at /socket.io/socket.io.js -->
     <script src="/socket.io/socket.io.js"></script>
-
-    <script>
-      // Connect back to the same host that served this page (no hardcoded IP)
-      const socket = io("http://10.0.0.157:3001");
-
-      const chat = document.getElementById("chat");
-      const nameInput = document.getElementById("name");
-      const roomInput = document.getElementById("room");
-      const msgInput = document.getElementById("msg");
-      const joinBtn = document.getElementById("joinBtn");
-      const sendBtn = document.getElementById("sendBtn");
-
-      let currentRoom = null;
-
-      function nowTime() {
-        return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      }
-
-      function addSystem(text) {
-        const div = document.createElement("div");
-        div.className = "system";
-        div.textContent = `[${nowTime()}] ${text}`;
-        chat.appendChild(div);
-        chat.scrollTop = chat.scrollHeight;
-      }
-
-      function addMessage({ room, name, text, time, socketId }) {
-        // If you haven't joined yet, still show everything (simple test mode)
-        // If you have joined a room, show only that room's messages (basic filter)
-        if (currentRoom && room && room !== currentRoom) return;
-
-        const div = document.createElement("div");
-        const isMe = socketId && socketId === socket.id;
-        div.className = "bubble" + (isMe ? " me" : "");
-        div.innerHTML = `<span class="who">${escapeHtml(name || "Anon")}</span>
-                         <span>${escapeHtml(text)}</span>
-                         <div class="meta">${escapeHtml(time || nowTime())}${room ? " • room: " + escapeHtml(room) : ""}</div>`;
-        chat.appendChild(div);
-        chat.scrollTop = chat.scrollHeight;
-      }
-
-      function escapeHtml(s) {
-        return String(s).replace(/[&<>"']/g, (c) => ({
-          "&": "&amp;",
-          "<": "&lt;",
-          ">": "&gt;",
-          '"': "&quot;",
-          "'": "&#039;"
-        }[c]));
-      }
-
-      // ---- Connection events ----
-      socket.on("connect", () => {
-        addSystem(`Connected ✅ (socket: ${socket.id})`);
-      });
-
-      socket.on("disconnect", () => {
-        addSystem("Disconnected ⚠️");
-      });
-
-      socket.on("connect_error", (err) => {
-        addSystem("Connect error ❌ " + err.message);
-      });
-
-      // ---- Chat events ----
-      // Server emits: io.emit("receive_message", message)
-      socket.on("receive_message", (message) => {
-        addMessage(message);
-      });
-
-      // ---- UI actions ----
-      joinBtn.addEventListener("click", () => {
-        const name = nameInput.value.trim() || "Anon";
-        const room = roomInput.value.trim() || "lobby";
-        currentRoom = room;
-        addSystem(`Joined room: ${room} (local filter for now)`);
-        // NOTE: We are NOT doing real server-side rooms yet.
-        // Next step we’ll add: socket.emit("join_room", room) + server-side io.to(room).emit(...)
-      });
-
-      function send() {
-        const name = nameInput.value.trim() || "Anon";
-        const room = roomInput.value.trim() || "lobby";
-        const text = msgInput.value.trim();
-        if (!text) return;
-
-        const payload = {
-          room,
-          name,
-          text,
-          time: nowTime(),
-          socketId: socket.id
-        };
-
-        socket.emit("send_message", payload);
-        msgInput.value = "";
-        msgInput.focus();
-      }
-
-      sendBtn.addEventListener("click", send);
-      msgInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") send();
-      });
-    </script>
+    <script src="./chat.js"></script>
   </body>
 </html>
