@@ -1,4 +1,7 @@
 const http = require("http");
+require("dotenv").config();
+const portNumber = process.env.PORT || 3001;
+const connectDB = require('./config/db');
 
 // Socket io's Server class
 // This is what we will use to instantiate the io server
@@ -28,6 +31,15 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(3001, () => {
-  console.log("Server running on port 3001");
-});
+async function start() {
+  await connectDB();
+
+  server.listen(portNumber, () => {
+    console.log(`Server running on port ${portNumber}`);
+  });
+}
+
+start().catch((err) => {
+  console.error("Start up failed" , err);
+  process.exit(1);
+})
