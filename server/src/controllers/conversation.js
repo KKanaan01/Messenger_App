@@ -76,39 +76,66 @@ Model.find({ avatar: { $exists: false } })
 
 // #endregion
 
-
 // ONE ON ONE conversation method
 export const createConversation = async (req, res) => {
     try {
         const userId = req.user.userId;
         const desiredUserId = req.body.userId;
+        const groupMembers = req.body.userIds;
+        const name = req.body.name;
 
-        if (!desiredUserId) return res.status(400).json({ message: "Invalid user" });
+        if (Array.isArray(groupMembers)) {
+            if (!name) {
+                return res.status(400).json({ message: "Group name is required" });
+            }
 
-        if (userId === desiredUserId) return res.status(400).json({ message: "Cannot create chat with self." });
+            if (groupMembers.length < 2) {
+                return res
+                    .status(400)
+                    .json({ message: "Group chat needs at least 2 users" });
+            }
+            
+            const finalGroupMembers = [...new Set([userId , ...groupMembers])];
 
-        const existingConversation = await Conversation.findOne({
-            members: { $all: [userId, desiredUserId] },
-            isGroup: false
-        });
-
-        if (existingConversation) {
-            return res.status(200).json({
-                chat: {
-                    id: existingConversation._id,
-                    isGroup: existingConversation.isGroup,
-                    members: existingConversation.members,
-                    createdAt: existingConversation.createdAt
-                }
-            });
-        } else {
-            const chat = await Conversation.create({
-                members: [userId, desiredUserId]
+            const groupChat = await Conversation.create({
+                name: name,
+                members: finalGroupMembers,
+                isGroup: true,
+                admin: userId
             });
 
             return res.status(201).json({
-                chat: { id: chat._id, isGroup: chat.isGroup, members: chat.members, createdAt: chat.createdAt }
+                chat: { id: groupChat._id, isGroup: groupChat.isGroup, members: groupChat.members, createdAt: groupChat.createdAt }
             });
+
+        } else if (desiredUserId) {
+            if (userId === desiredUserId) return res.status(400).json({ message: "Cannot create chat with self." });
+
+            const existingConversation = await Conversation.findOne({
+                members: { $all: [userId, desiredUserId] },
+                isGroup: false
+            });
+
+            if (existingConversation) {
+                return res.status(200).json({
+                    chat: {
+                        id: existingConversation._id,
+                        isGroup: existingConversation.isGroup,
+                        members: existingConversation.members,
+                        createdAt: existingConversation.createdAt
+                    }
+                });
+            } else {
+                const chat = await Conversation.create({
+                    members: [userId, desiredUserId]
+                });
+
+                return res.status(201).json({
+                    chat: { id: chat._id, isGroup: chat.isGroup, members: chat.members, createdAt: chat.createdAt }
+                });
+            }
+        } else {
+            return res.status(400).json({ message: "Invalid Payload" });
         }
     } catch (err) {
         console.error('Something went wrong: ' + err);
@@ -117,12 +144,12 @@ export const createConversation = async (req, res) => {
 }
 
 
-export const createGroupChat = async (req, res) => {
-    try {
+// export const createGroupChat = async (req, res) => {
+//     try {
 
 
-    } catch (err) {
-        console.error('Something went wrong ' + err);
-        res.status(500).json({ message: "Server error" });
-    }
-}
+//     } catch (err) {
+//         console.error('Something went wrong ' + err);
+//         res.status(500).json({ message: "Server error" });
+//     }
+// }

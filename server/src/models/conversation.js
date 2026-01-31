@@ -1,6 +1,13 @@
 const mongoose = require("mongoose");
 
 const conversationSchema = new mongoose.Schema({
+    name: {
+        type: String,
+        trim: true,
+        required: function () {
+            return this.isGroup === true
+        },
+    },
     isGroup: {
         type: Boolean,
         default: false,
@@ -12,10 +19,16 @@ const conversationSchema = new mongoose.Schema({
             required: true,
         },
     ],
+    admin : {
+        type: mongoose.Schema.Types.ObjectId,
+        ref : "User"
+    },
     createdAt: {
         type: Date,
         default: Date.now,
     },
 });
+
+conversationSchema.index({ members: 1 });
 
 export default mongoose.model("Conversation", conversationSchema);
