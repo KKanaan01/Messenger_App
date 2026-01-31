@@ -22,12 +22,8 @@ const conversationSchema = new mongoose.Schema({
     admin : {
         type: mongoose.Schema.Types.ObjectId,
         ref : "User"
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now,
-    },
-});
+    }
+} , { timestamps: true });
 
 conversationSchema.index({ members: 1 });
 

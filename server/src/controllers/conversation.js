@@ -130,7 +130,7 @@ export const createConversation = async (req, res) => {
             const existingConversation = await Conversation.findOne({
                 members: { $all: [userId, desiredUserId] },
                 isGroup: false
-            }).populate("members" , "username");
+            }).populate("members", "username");
 
             if (existingConversation) {
                 return res.status(200).json({
@@ -158,5 +158,24 @@ export const createConversation = async (req, res) => {
     } catch (err) {
         console.error('Something went wrong: ' + err);
         res.status(500).json({ message: "Server error" });
+    }
+}
+
+export const getAllConversations = async (req, res) => {
+    try {
+        const userId = req.userId;
+
+        const conversations = await Conversation.find({
+            members: userId
+        })
+        .sort({ updatedAt : -1})
+        .populate("members" , "username");
+
+        return res.status(200).json({
+            conversations
+        });
+    } catch (err) {
+        console.error('Something went wrong ' + err);
+        return res.status(500).json({ message: "Server error" });
     }
 }
