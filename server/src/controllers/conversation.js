@@ -115,3 +115,14 @@ export const createConversation = async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 }
+
+
+export const createGroupChat = async (req, res) => {
+    try {
+
+
+    } catch (err) {
+        console.error('Something went wrong ' + err);
+        res.status(500).json({ message: "Server error" });
+    }
+}
