@@ -1,4 +1,5 @@
 const Conversation = require('../models/conversation');
+const mongoose = require("mongoose");
 
 // #region Mongo Query Operators Cheat Sheet
 
@@ -76,7 +77,8 @@ Model.find({ avatar: { $exists: false } })
 
 // #endregion
 
-// ONE ON ONE conversation method
+const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
+
 export const createConversation = async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -94,27 +96,41 @@ export const createConversation = async (req, res) => {
                     .status(400)
                     .json({ message: "Group chat needs at least 2 users" });
             }
-            
-            const finalGroupMembers = [...new Set([userId , ...groupMembers])];
 
-            const groupChat = await Conversation.create({
+            if (!isValidId(userId) || !groupMembers.every(isValidId)) {
+                return res.status(400).json({ message: "Invalid user ID" });
+            }
+
+            const finalGroupMembers = [...new Set([userId, ...groupMembers])];
+
+            let groupChat = await Conversation.create({
                 name: name,
                 members: finalGroupMembers,
                 isGroup: true,
                 admin: userId
             });
 
+            groupChat = await groupChat.populate(
+                "members admin",
+                "username"
+            );
+
             return res.status(201).json({
                 chat: { id: groupChat._id, isGroup: groupChat.isGroup, members: groupChat.members, createdAt: groupChat.createdAt }
             });
 
         } else if (desiredUserId) {
+
+            if (!isValidId(userId) || !isValidId(desiredUserId)) {
+                return res.status(400).json({ message: "Invalid user ID" });
+            }
+
             if (userId === desiredUserId) return res.status(400).json({ message: "Cannot create chat with self." });
 
             const existingConversation = await Conversation.findOne({
                 members: { $all: [userId, desiredUserId] },
                 isGroup: false
-            });
+            }).populate("members" , "username");
 
             if (existingConversation) {
                 return res.status(200).json({
@@ -126,9 +142,11 @@ export const createConversation = async (req, res) => {
                     }
                 });
             } else {
-                const chat = await Conversation.create({
+                let chat = await Conversation.create({
                     members: [userId, desiredUserId]
                 });
+
+                chat = await chat.populate("members", "username");
 
                 return res.status(201).json({
                     chat: { id: chat._id, isGroup: chat.isGroup, members: chat.members, createdAt: chat.createdAt }
@@ -142,14 +160,3 @@ export const createConversation = async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 }
-
-
-// export const createGroupChat = async (req, res) => {
-//     try {
-
-
-//     } catch (err) {
-//         console.error('Something went wrong ' + err);
-//         res.status(500).json({ message: "Server error" });
-//     }
-// }
