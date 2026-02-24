@@ -1,3 +1,6 @@
+import { path } from '../app';
+import { populate } from '../models/user';
+
 const Conversation = require('../models/conversation');
 const mongoose = require("mongoose");
 
@@ -169,7 +172,13 @@ export const getAllConversations = async (req, res) => {
             members: userId
         })
         .sort({ updatedAt : -1})
-        .populate("members" , "username");
+        .populate("members" , "username")
+        .populate({
+            path: "lastMessage",
+            populate: {
+                path: "sender"
+            }
+        });
 
         return res.status(200).json({
             conversations
