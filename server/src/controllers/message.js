@@ -29,14 +29,15 @@ export const createMessage = async (req, res) => {
         let newMessage = await Message.create({
             conversation: convo._id,
             sender: senderId,
-            text: text,
+            text: text.trim(),
             seenBy: [senderId]
         });
 
         await Conversation.findByIdAndUpdate(
             convo._id,
             {
-               $set: {lastMessage: newMessage._id}
+               $set: {lastMessage: newMessage._id},
+               $currentDate: { updatedAt: true }
             }
         );
 
@@ -52,5 +53,38 @@ export const createMessage = async (req, res) => {
     } catch (err) {
         console.error('Something went wrong: ' + err);
         res.status(500).json({ message: 'Server error' })
+    }
+}
+
+export const retrieveMessages = async (req , res) => {
+    try {
+        const { conversationId } = req.params;
+
+        if (!isValidId(conversationId)) {
+            return res.status(400).json({ message: 'Invalid Conversation Id.' });
+        }
+
+        // This checks if the user making the request actually belongs to the conversation
+        const conversation = Conversation.find({
+            _id : conversationId,
+            members: req.userId
+        });
+
+        if (!conversation)
+            return res.status(403).json({message : 'Access denied'});
+
+        const messages = await Message.find({
+            conversation: conversationId
+        })
+        .sort({createdAt : 1})
+        .populate("sender" , "firstName lastName username");
+
+        return res.status(200).json({
+            messages
+        });
+
+    } catch (err) {
+        console.error("Something went wrong " + err);
+        res.status(500).json({message : 'Server error'});
     }
 }

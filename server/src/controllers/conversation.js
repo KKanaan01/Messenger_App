@@ -2,6 +2,7 @@ import { path } from '../app';
 import { populate } from '../models/user';
 
 const Conversation = require('../models/conversation');
+const User = require('../models/user');
 const mongoose = require("mongoose");
 
 // #region Mongo Query Operators Cheat Sheet
@@ -84,7 +85,7 @@ const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 export const createConversation = async (req, res) => {
     try {
-        const userId = req.user.userId;
+        const userId = req.userId;
         const desiredUserId = req.body.userId;
         const groupMembers = req.body.userIds;
         const name = req.body.name;
@@ -102,6 +103,14 @@ export const createConversation = async (req, res) => {
 
             if (!isValidId(userId) || !groupMembers.every(isValidId)) {
                 return res.status(400).json({ message: "Invalid user ID" });
+            }
+
+            const users = await User.find({
+                _id: { $in: groupMembers }
+            });
+
+            if (users.length !== groupMembers.length) {
+                return res.status(400).json({ message: "One or more users not found" });
             }
 
             const finalGroupMembers = [...new Set([userId, ...groupMembers])];
@@ -171,14 +180,14 @@ export const getAllConversations = async (req, res) => {
         const conversations = await Conversation.find({
             members: userId
         })
-        .sort({ updatedAt : -1})
-        .populate("members" , "username")
-        .populate({
-            path: "lastMessage",
-            populate: {
-                path: "sender"
-            }
-        });
+            .sort({ updatedAt: -1 })
+            .populate("members", "username")
+            .populate({
+                path: "lastMessage",
+                populate: {
+                    path: "sender"
+                }
+            });
 
         return res.status(200).json({
             conversations
