@@ -9,7 +9,7 @@ export const createMessage = async (req, res) => {
         const { conversationId, text } = req.body;
         const senderId = req.userId;
 
-        if (!isValidId(conversationId)) 
+        if (!isValidId(conversationId))
             return res.status(400).json({ message: 'Invalid Conversation Id.' });
 
         if (!text || !text.trim()) {
@@ -24,7 +24,7 @@ export const createMessage = async (req, res) => {
         });
 
         if (!convo)
-            return res.status(404).json({message : 'Conversation not found'});
+            return res.status(404).json({ message: 'Conversation not found' });
 
         let newMessage = await Message.create({
             conversation: convo._id,
@@ -36,8 +36,8 @@ export const createMessage = async (req, res) => {
         await Conversation.findByIdAndUpdate(
             convo._id,
             {
-               $set: {lastMessage: newMessage._id},
-               $currentDate: { updatedAt: true }
+                $set: { lastMessage: newMessage._id },
+                $currentDate: { updatedAt: true }
             }
         );
 
@@ -56,7 +56,7 @@ export const createMessage = async (req, res) => {
     }
 }
 
-export const retrieveMessages = async (req , res) => {
+export const retrieveMessages = async (req, res) => {
     try {
         const { conversationId } = req.params;
 
@@ -65,19 +65,19 @@ export const retrieveMessages = async (req , res) => {
         }
 
         // This checks if the user making the request actually belongs to the conversation
-        const conversation = Conversation.find({
-            _id : conversationId,
+        const conversation = Conversation.findOne({
+            _id: conversationId,
             members: req.userId
         });
 
         if (!conversation)
-            return res.status(403).json({message : 'Access denied'});
+            return res.status(403).json({ message: 'Access denied' });
 
         const messages = await Message.find({
             conversation: conversationId
         })
-        .sort({createdAt : 1})
-        .populate("sender" , "firstName lastName username");
+            .sort({ createdAt: 1 })
+            .populate("sender", "firstName lastName username");
 
         return res.status(200).json({
             messages
@@ -85,6 +85,43 @@ export const retrieveMessages = async (req , res) => {
 
     } catch (err) {
         console.error("Something went wrong " + err);
-        res.status(500).json({message : 'Server error'});
+        res.status(500).json({ message: 'Server error' });
+    }
+}
+
+export const markAsSeen = async (req, res) => {
+    try {
+        const { conversationId } = req.params;
+        const userId = req.userId;
+
+        if (!isValidId(conversationId))
+            return res.status(400).json({ message: 'Invalid Conversation Id.' });
+
+        const conversation = await Conversation.findOne({
+            _id: conversationId,
+            members: userId
+        });
+
+        if (!conversation)
+            return res.status(403).json({ message: 'Access denied' });
+
+        const result = await Message.updateMany(
+            {
+                conversation: conversationId,
+                seenBy: { $ne: userId }
+            },
+            {
+                $addToSet: { seenBy: userId }
+            }
+        );
+
+        return res.status(200).json({
+            message: "Messages marked as seen",
+            modifiedCount: result.modifiedCount
+        });
+
+    } catch (err) {
+        console.error("Something went wrong " + err);
+        res.status(500).json({ message: 'Server error' });
     }
 }
