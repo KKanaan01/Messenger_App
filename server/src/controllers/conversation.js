@@ -173,6 +173,90 @@ export const createConversation = async (req, res) => {
     }
 }
 
+/**
+ * getAllConversations (Optimized with Aggregation Pipeline)
+ *
+ * PURPOSE:
+ * Returns all conversations the logged-in user belongs to,
+ * including:
+ *   - Populated members
+ *   - Populated lastMessage (with sender)
+ *   - Computed unreadCount
+ *   - Sorted by most recently updated
+ *
+ * WHY AGGREGATION IS USED:
+ * Instead of:
+ *   - Querying conversations
+ *   - Then running N separate unread count queries
+ *   - Then populating manually
+ *
+ * We use MongoDB’s aggregation pipeline to perform:
+ *   - Filtering
+ *   - Joining
+ *   - Counting
+ *   - Field transformations
+ *
+ * All in ONE database call (optimized and scalable).
+ *
+ * ------------------------------------------------------------
+ * AGGREGATION STAGES EXPLAINED:
+ *
+ * $match:
+ *   Filters conversations where the user is a member.
+ *
+ * $lookup:
+ *   MongoDB’s version of a JOIN.
+ *   Used to:
+ *     - Join messages collection (for unread count)
+ *     - Join users collection (for members)
+ *     - Join messages again (for lastMessage)
+ *
+ * $expr:
+ *   Allows use of aggregation expressions inside $match.
+ *   Needed when comparing fields between collections
+ *   (e.g., message.conversation === conversation._id).
+ *
+ * $and:
+ *   Logical AND inside aggregation conditions.
+ *
+ * $eq:
+ *   Equality comparison.
+ *
+ * $in:
+ *   Checks if a value exists inside an array.
+ *
+ * $not:
+ *   Negates a condition.
+ *   Used to find messages where userId is NOT in seenBy.
+ *
+ * $count:
+ *   Counts matched documents inside the lookup pipeline.
+ *
+ * $addFields:
+ *   Adds computed fields to the document.
+ *   Used to create unreadCount from lookup results.
+ *
+ * $arrayElemAt:
+ *   Extracts a value from an array at a given index.
+ *
+ * $ifNull:
+ *   Provides a fallback value (e.g., unreadCount = 0 if no unread messages).
+ *
+ * $unwind:
+ *   Converts an array field into a single object.
+ *   Required because $lookup always returns arrays.
+ *
+ * $sort:
+ *   Sorts conversations by updatedAt (most recent first).
+ *
+ * ------------------------------------------------------------
+ *
+ * PERFORMANCE BENEFIT:
+ * - Avoids N+1 query problem
+ * - Computes unread counts server side
+ * - Reduces database round trips
+ * - Scales significantly better than looping in application code
+ */
 export const getAllConversations = async (req, res) => {
     try {
         // const userId = req.userId;
@@ -188,7 +272,7 @@ export const getAllConversations = async (req, res) => {
             },
             // Lookup unread messages count
             {
-                $lookup: {
+                $lookup: {  
                     from: "messages",
                     let: { convoId: "$_id" },
                     pipeline: [
