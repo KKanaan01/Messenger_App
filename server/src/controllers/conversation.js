@@ -175,23 +175,107 @@ export const createConversation = async (req, res) => {
 
 export const getAllConversations = async (req, res) => {
     try {
-        const userId = req.userId;
+        // const userId = req.userId;
+        // Aggregation needs an actual object id so a string wont work
+        const userObjectId = new mongoose.Types.ObjectId(req.userId);
 
-        const conversations = await Conversation.find({
-            members: userId
-        })
-            .sort({ updatedAt: -1 })
-            .populate("members", "username")
-            .populate({
-                path: "lastMessage",
-                populate: {
-                    path: "sender"
+        const conversations = await Conversation.aggregate([
+            // Only conversations the user belongs to
+            {
+                $match: {
+                    members: userObjectId
                 }
-            });
+            },
+            // Lookup unread messages count
+            {
+                $lookup: {
+                    from: "messages",
+                    let: { convoId: "$_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$conversation", "$$convoId"] },
+                                        { $not: [{ $in: [userObjectId, "$seenBy"] }] }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            $count: "count"
+                        }
+                    ],
+                    as: "unreadData"
+                }
+            },
 
-        return res.status(200).json({
-            conversations
-        });
+            // Extract unreadCount (default 0 if none)
+            {
+                $addFields: {
+                    unreadCount: {
+                        $ifNull: [
+                            { $arrayElemAt: ["$unreadData.count", 0] },
+                            0
+                        ]
+                    }
+                }
+            },
+
+            //Populate members
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "members",
+                    foreignField: "_id",
+                    as: "members"
+                }
+            },
+
+            //Populate lastMessage
+            {
+                $lookup: {
+                    from: "messages",
+                    localField: "lastMessage",
+                    foreignField: "_id",
+                    as: "lastMessage"
+                }
+            },
+
+            // Convert lastMessage array → object
+            {
+                $unwind: {
+                    path: "$lastMessage",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+
+            // Optional: populate lastMessage.sender
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "lastMessage.sender",
+                    foreignField: "_id",
+                    as: "lastMessage.sender"
+                }
+            },
+
+            {
+                $unwind: {
+                    path: "$lastMessage.sender",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+
+            //Sort by most recently updated
+            {
+                $sort: {
+                    updatedAt: -1
+                }
+            }
+        ]);
+
+        return res.status(200).json({ conversations });
     } catch (err) {
         console.error('Something went wrong ' + err);
         return res.status(500).json({ message: "Server error" });
