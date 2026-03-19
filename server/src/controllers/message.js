@@ -1,10 +1,10 @@
-import Conversation from '../models/conversation';
+const Conversation = require('../models/conversation');
 const Message = require('../models/message');
 const mongoose = require('mongoose');
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
-export const createMessage = async (req, res) => {
+const createMessage = async (req, res) => {
     try {
         const { conversationId, text } = req.body;
         const senderId = req.userId;
@@ -56,7 +56,7 @@ export const createMessage = async (req, res) => {
     }
 }
 
-export const retrieveMessages = async (req, res) => {
+const retrieveMessages = async (req, res) => {
     try {
         const { conversationId } = req.params;
 
@@ -89,7 +89,7 @@ export const retrieveMessages = async (req, res) => {
     }
 }
 
-export const markAsSeen = async (req, res) => {
+const markAsSeen = async (req, res) => {
     try {
         const { conversationId } = req.params;
         const userId = req.userId;
@@ -124,4 +124,10 @@ export const markAsSeen = async (req, res) => {
         console.error("Something went wrong " + err);
         res.status(500).json({ message: 'Server error' });
     }
+}
+
+module.exports ={
+    createMessage,
+    retrieveMessages,
+    markAsSeen
 }

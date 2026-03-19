@@ -1,6 +1,3 @@
-import { path } from '../app';
-import { populate } from '../models/user';
-
 const Conversation = require('../models/conversation');
 const User = require('../models/user');
 const mongoose = require("mongoose");
@@ -83,7 +80,7 @@ Model.find({ avatar: { $exists: false } })
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
-export const createConversation = async (req, res) => {
+const createConversation = async (req, res) => {
     try {
         const userId = req.userId;
         const desiredUserId = req.body.userId;
@@ -257,7 +254,7 @@ export const createConversation = async (req, res) => {
  * - Reduces database round trips
  * - Scales significantly better than looping in application code
  */
-export const getAllConversations = async (req, res) => {
+const getAllConversations = async (req, res) => {
     try {
         // const userId = req.userId;
         // Aggregation needs an actual object id so a string wont work
@@ -365,3 +362,8 @@ export const getAllConversations = async (req, res) => {
         return res.status(500).json({ message: "Server error" });
     }
 }
+
+module.exports = {
+    createConversation,
+    getAllConversations
+};

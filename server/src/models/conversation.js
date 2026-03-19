@@ -32,4 +32,4 @@ const conversationSchema = new mongoose.Schema({
 
 conversationSchema.index({ members: 1 });
 
-export default mongoose.model("Conversation", conversationSchema);
+module.exports = mongoose.model("Conversation", conversationSchema);
