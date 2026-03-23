@@ -12,4 +12,19 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+export const getConversations = () =>
+  api.get("/chat/getConversations");
+
+export const createDirectConversation = (userId) =>
+  api.post("/chat/createConversation", { userId });
+
+export const createGroupConversation = (name, userIds) =>
+  api.post("/chat/createConversation", { name, userIds });
+
+export const getMessages = (conversationId) =>
+  api.get(`/messages/${conversationId}`);
+
+export const sendMessage = (conversationId, text) =>
+  api.post("/messages/sendMessage", { conversationId, text });
+
 export default api;
