@@ -1,10 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
-import {
-  getConversations,
-  getMessages,
-  sendMessage,
-} from "../api/axios";
+import { getConversations, getMessages, sendMessage } from "../api/axios";
 
 export default function Chat() {
   const { user, logout } = useAuth();
@@ -53,7 +49,6 @@ export default function Chat() {
     setLoadingMessages(true);
     fetchMessages(convo._id);
 
-    // Clear old polling and start new one
     if (pollingRef.current) clearInterval(pollingRef.current);
     pollingRef.current = setInterval(() => {
       fetchMessages(convo._id);
@@ -61,7 +56,6 @@ export default function Chat() {
     }, 3000);
   };
 
-  // Cleanup polling on unmount
   useEffect(() => {
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
@@ -96,8 +90,8 @@ export default function Chat() {
 
   const getLastMessage = (convo) => {
     if (!convo.lastMessage?.text) return "No messages yet";
-    const senderName = convo.lastMessage.sender?.username;
-    const label = senderName === user.username ? "You" : senderName;
+    const label =
+      convo.lastMessage.sender?.username === user.username ? "You" : convo.lastMessage.sender?.username;
     return `${label}: ${convo.lastMessage.text}`;
   };
 
@@ -111,33 +105,40 @@ export default function Chat() {
 
   const isOwn = (msg) => msg.sender?._id === user.id;
 
+  const getInitial = (convo) => getConvoName(convo)?.[0]?.toUpperCase() || "?";
+
   return (
-    <div className="h-screen bg-white flex overflow-hidden">
+    <div className="h-screen flex overflow-hidden" style={{ background: "#fff5f0" }}>
 
       {/* ─── Sidebar ─────────────────────────────────── */}
-      <div className="w-80 border-r border-gray-100 flex flex-col bg-gray-50 shrink-0">
+      <div className="w-80 flex flex-col shrink-0 bg-white shadow-lg rounded-r-3xl overflow-hidden">
 
         {/* Header */}
-        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-black tracking-tight">💬 Messenger</h1>
+        <div
+          className="px-6 py-5 flex items-center justify-between"
+          style={{ background: "linear-gradient(135deg, #ff6b6b, #ff8e53)" }}
+        >
+          <div>
+            <h1 className="text-xl font-extrabold text-white tracking-tight">💬 Messenger</h1>
+            <p className="text-orange-100 text-xs mt-0.5">@{user?.username}</p>
+          </div>
           <button
             onClick={logout}
-            className="text-xs text-gray-400 hover:text-black transition font-medium"
+            className="text-xs bg-white/20 hover:bg-white/30 text-white font-semibold px-3 py-1.5 rounded-full transition"
           >
             Logout
           </button>
         </div>
 
-        {/* User Info */}
-        <div className="px-6 py-4 border-b border-gray-100">
-          <p className="text-xs text-gray-400 uppercase tracking-widest font-semibold">
-            Signed in as
+        {/* Conversations Label */}
+        <div className="px-6 py-4">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+            Conversations
           </p>
-          <p className="text-sm font-semibold text-black mt-1">@{user?.username}</p>
         </div>
 
         {/* Conversation List */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto px-3 pb-4 flex flex-col gap-1">
           {loadingConvos ? (
             <div className="flex items-center justify-center h-32">
               <p className="text-sm text-gray-300">Loading...</p>
@@ -151,32 +152,43 @@ export default function Chat() {
               <button
                 key={convo._id}
                 onClick={() => handleSelectConvo(convo)}
-                className={`w-full text-left px-6 py-4 border-b border-gray-100 hover:bg-white transition ${
+                className={`w-full text-left px-4 py-3 rounded-2xl flex items-center gap-3 transition ${
                   selectedConvo?._id === convo._id
-                    ? "bg-white border-l-4 border-l-black"
-                    : ""
+                    ? "bg-orange-50 border-2 border-orange-300"
+                    : "hover:bg-gray-50 border-2 border-transparent"
                 }`}
               >
-                {/* Name + Time */}
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm font-semibold text-black truncate">
-                    {getConvoName(convo)}
-                  </p>
-                  <span className="text-xs text-gray-300 ml-2 shrink-0">
-                    {formatTime(convo.updatedAt)}
-                  </span>
+                {/* Avatar */}
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
+                  style={{ background: "linear-gradient(135deg, #ff6b6b, #ff8e53)" }}
+                >
+                  {getInitial(convo)}
                 </div>
 
-                {/* Last Message + Unread Badge */}
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs text-gray-400 truncate">
-                    {getLastMessage(convo)}
-                  </p>
-                  {convo.unreadCount > 0 && (
-                    <span className="bg-black text-white text-xs font-bold rounded-full px-2 py-0.5 shrink-0">
-                      {convo.unreadCount}
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold text-gray-800 truncate">
+                      {getConvoName(convo)}
+                    </p>
+                    <span className="text-xs text-gray-300 ml-1 shrink-0">
+                      {formatTime(convo.updatedAt)}
                     </span>
-                  )}
+                  </div>
+                  <div className="flex items-center justify-between gap-1">
+                    <p className="text-xs text-gray-400 truncate">
+                      {getLastMessage(convo)}
+                    </p>
+                    {convo.unreadCount > 0 && (
+                      <span
+                        className="text-white text-xs font-bold rounded-full px-2 py-0.5 shrink-0"
+                        style={{ background: "linear-gradient(135deg, #ff6b6b, #ff8e53)" }}
+                      >
+                        {convo.unreadCount}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </button>
             ))
@@ -186,13 +198,18 @@ export default function Chat() {
 
       {/* ─── Main Chat Area ───────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden">
-
         {selectedConvo ? (
           <>
             {/* Chat Header */}
-            <div className="px-6 py-5 border-b border-gray-100 bg-white flex items-center gap-3">
+            <div className="px-6 py-4 bg-white shadow-sm flex items-center gap-4">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
+                style={{ background: "linear-gradient(135deg, #ff6b6b, #ff8e53)" }}
+              >
+                {getInitial(selectedConvo)}
+              </div>
               <div>
-                <p className="text-sm font-bold text-black">
+                <p className="text-sm font-extrabold text-gray-800">
                   {getConvoName(selectedConvo)}
                 </p>
                 <p className="text-xs text-gray-400">
@@ -204,15 +221,16 @@ export default function Chat() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-3">
+            <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-4">
               {loadingMessages ? (
                 <div className="flex items-center justify-center h-full">
                   <p className="text-sm text-gray-300">Loading messages...</p>
                 </div>
               ) : messages.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-sm text-gray-300">
-                    No messages yet. Say hello! 👋
+                <div className="flex items-center justify-center h-full flex-col gap-2">
+                  <p className="text-3xl">👋</p>
+                  <p className="text-sm text-gray-400 font-medium">
+                    Say hello to {getConvoName(selectedConvo)}!
                   </p>
                 </div>
               ) : (
@@ -223,20 +241,25 @@ export default function Chat() {
                       isOwn(msg) ? "self-end items-end" : "self-start items-start"
                     }`}
                   >
-                    {/* Sender name (only for group chats) */}
+                    {/* Sender name for group chats */}
                     {selectedConvo.isGroup && !isOwn(msg) && (
-                      <p className="text-xs text-gray-400 font-medium px-1">
+                      <p className="text-xs font-semibold px-1" style={{ color: "#ff8e53" }}>
                         {msg.sender?.username}
                       </p>
                     )}
 
                     {/* Bubble */}
                     <div
-                      className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                      className={`px-4 py-3 rounded-3xl text-sm leading-relaxed shadow-sm ${
                         isOwn(msg)
-                          ? "bg-black text-white rounded-br-sm"
-                          : "bg-gray-100 text-black rounded-bl-sm"
+                          ? "text-white rounded-br-sm"
+                          : "bg-white text-gray-800 rounded-bl-sm"
                       }`}
+                      style={
+                        isOwn(msg)
+                          ? { background: "linear-gradient(135deg, #ff6b6b, #ff8e53)" }
+                          : {}
+                      }
                     >
                       {msg.text}
                     </div>
@@ -253,39 +276,38 @@ export default function Chat() {
 
             {/* Error */}
             {error && (
-              <div className="mx-6 mb-2 text-xs text-red-400 text-center">
-                {error}
-              </div>
+              <p className="text-xs text-red-400 text-center mb-2">{error}</p>
             )}
 
             {/* Message Input */}
             <form
               onSubmit={handleSend}
-              className="px-6 py-4 border-t border-gray-100 bg-white flex items-center gap-3"
+              className="px-6 py-4 bg-white shadow-inner flex items-center gap-3"
             >
               <input
                 type="text"
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Type a message..."
-                className="flex-1 bg-gray-50 border border-gray-200 rounded-full px-5 py-3 text-sm text-black placeholder-gray-300 focus:outline-none focus:border-black transition"
+                className="flex-1 border-2 border-orange-100 bg-orange-50 rounded-full px-5 py-3 text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:border-orange-400 transition"
               />
               <button
                 type="submit"
                 disabled={!text.trim()}
-                className="bg-black hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-3 rounded-full transition"
+                className="text-white font-bold text-sm px-5 py-3 rounded-full shadow-md disabled:opacity-40 disabled:cursor-not-allowed transition hover:scale-105 active:scale-95"
+                style={{ background: "linear-gradient(135deg, #ff6b6b, #ff8e53)" }}
               >
-                Send
+                Send 🚀
               </button>
             </form>
           </>
         ) : (
           /* Empty State */
-          <div className="flex-1 flex flex-col items-center justify-center gap-3">
-            <p className="text-4xl">💬</p>
-            <p className="text-sm font-semibold text-black">Your messages</p>
-            <p className="text-xs text-gray-400">
-              Select a conversation to start chatting
+          <div className="flex-1 flex flex-col items-center justify-center gap-4">
+            <div className="text-6xl">💬</div>
+            <p className="text-xl font-extrabold text-gray-700">Your Messages</p>
+            <p className="text-sm text-gray-400">
+              Pick a conversation and start chatting!
             </p>
           </div>
         )}

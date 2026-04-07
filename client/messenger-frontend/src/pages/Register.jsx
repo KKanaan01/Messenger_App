@@ -29,18 +29,25 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-4 py-16">
-      <div className="w-full max-w-md bg-gray-50 border border-gray-100 rounded-2xl px-10 pt-10 pb-12 shadow-sm">
+    <div
+      className="min-h-screen flex items-center justify-center px-4 py-16"
+      style={{ background: "linear-gradient(135deg, #ff6b6b 0%, #ff8e53 40%, #ff6b9d 100%)" }}
+    >
+      <div className="w-full max-w-md bg-white/90 backdrop-blur-sm rounded-3xl px-10 pt-10 pb-12 shadow-2xl">
 
         {/* Logo */}
-        <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-black tracking-tight">Messenger</h1>
-          <p className="text-gray-400 text-sm mt-2">Create your account to get started.</p>
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">
+            Messenger
+          </h1>
+          <p className="text-gray-400 text-sm mt-2">
+            Create your account and start chatting! 
+          </p>
         </div>
 
         {/* Error */}
         {error && (
-          <div className="border border-red-200 bg-red-50 text-red-500 text-sm rounded-lg px-4 py-3 mb-6">
+          <div className="bg-red-50 border border-red-200 text-red-500 text-sm rounded-2xl px-4 py-3 mb-6 text-center">
             {error}
           </div>
         )}
@@ -51,7 +58,7 @@ export default function Register() {
           {/* First & Last Name */}
           <div className="flex gap-4">
             <div className="flex flex-col gap-2 flex-1">
-              <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
                 First Name
               </label>
               <input
@@ -60,11 +67,11 @@ export default function Register() {
                 value={form.firstName}
                 onChange={handleChange}
                 required
-                className="border border-gray-200 rounded-lg px-4 py-3 text-black placeholder-gray-300 focus:outline-none focus:border-black transition text-sm bg-white"
+                className="border-2 border-orange-100 bg-orange-50 rounded-2xl px-4 py-3 text-gray-800 placeholder-gray-300 focus:outline-none focus:border-orange-400 transition text-sm"
               />
             </div>
             <div className="flex flex-col gap-2 flex-1">
-              <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
                 Last Name
               </label>
               <input
@@ -73,13 +80,13 @@ export default function Register() {
                 value={form.lastName}
                 onChange={handleChange}
                 required
-                className="border border-gray-200 rounded-lg px-4 py-3 text-black placeholder-gray-300 focus:outline-none focus:border-black transition text-sm bg-white"
+                className="border-2 border-orange-200 bg-orange-50 rounded-2xl px-3 py-3 text-gray-800 placeholder-gray-300 focus:outline-none focus:border-orange-400 transition text-sm w-full min-w-0"
               />
             </div>
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
               Username
             </label>
             <input
@@ -88,12 +95,12 @@ export default function Register() {
               value={form.username}
               onChange={handleChange}
               required
-              className="border border-gray-200 rounded-lg px-4 py-3 text-black placeholder-gray-300 focus:outline-none focus:border-black transition text-sm bg-white"
+              className="border-2 border-orange-100 bg-orange-50 rounded-2xl px-4 py-3 text-gray-800 placeholder-gray-300 focus:outline-none focus:border-orange-400 transition text-sm"
             />
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
               Email
             </label>
             <input
@@ -103,12 +110,12 @@ export default function Register() {
               value={form.email}
               onChange={handleChange}
               required
-              className="border border-gray-200 rounded-lg px-4 py-3 text-black placeholder-gray-300 focus:outline-none focus:border-black transition text-sm bg-white"
+              className="border-2 border-orange-100 bg-orange-50 rounded-2xl px-4 py-3 text-gray-800 placeholder-gray-300 focus:outline-none focus:border-orange-400 transition text-sm"
             />
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
               Password
             </label>
             <input
@@ -118,14 +125,15 @@ export default function Register() {
               value={form.password}
               onChange={handleChange}
               required
-              className="border border-gray-200 rounded-lg px-4 py-3 text-black placeholder-gray-300 focus:outline-none focus:border-black transition text-sm bg-white"
+              className="border-2 border-orange-100 bg-orange-50 rounded-2xl px-4 py-3 text-gray-800 placeholder-gray-300 focus:outline-none focus:border-orange-400 transition text-sm"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="bg-black hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-lg py-3 mt-2 transition text-sm tracking-wide"
+            className="mt-2 py-3 rounded-2xl text-white font-bold text-sm tracking-wide shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition hover:scale-[1.02] active:scale-95"
+            style={{ background: "linear-gradient(135deg, #ff6b6b, #ff8e53)" }}
           >
             {loading ? "Creating account..." : "Create Account"}
           </button>
@@ -133,15 +141,19 @@ export default function Register() {
 
         {/* Divider */}
         <div className="flex items-center gap-4 my-6">
-          <div className="flex-1 h-px bg-gray-200" />
-          <span className="text-xs text-gray-300">OR</span>
-          <div className="flex-1 h-px bg-gray-200" />
+          <div className="flex-1 h-px bg-gray-100" />
+          <span className="text-xs text-gray-300 font-medium">OR</span>
+          <div className="flex-1 h-px bg-gray-100" />
         </div>
 
         {/* Footer */}
         <p className="text-center text-sm text-gray-400">
           Already have an account?{" "}
-          <Link to="/login" className="text-black font-semibold hover:underline">
+          <Link
+            to="/login"
+            className="font-bold hover:underline"
+            style={{ color: "#ff6b6b" }}
+          >
             Sign In
           </Link>
         </p>
