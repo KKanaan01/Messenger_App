@@ -26,7 +26,7 @@ export const getMessages = (conversationId) =>
   api.get(`/messages/${conversationId}`);
 
 export const sendMessage = (conversationId, text) =>
-  api.post("/messages/sendMessage", { conversationId, text });
+  api.post("/messages/createMessage", { conversationId, text });
 
 export const searchUsers = (query) =>
   api.get(`/users/search?query=${query}`);
