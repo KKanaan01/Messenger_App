@@ -11,6 +11,7 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use("/api/auth" , require('./routes/auth'));
 app.use("/api/chat" , require('./routes/conversation'));
 app.use("/api/messages" , require('./routes/message'));
+app.use("/api/users", require('./routes/user'));
 
 
 app.get("/" , (req , res) => {
