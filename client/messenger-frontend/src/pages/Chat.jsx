@@ -1,6 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
-import { getConversations, getMessages, sendMessage } from "../api/axios";
+import {
+  getConversations,
+  getMessages,
+  sendMessage,
+  searchUsers,
+  createDirectConversation,
+  markAsSeen
+} from "../api/axios";
+import socket from "../socket";
 
 export default function Chat() {
   const { user, logout } = useAuth();
@@ -12,7 +20,14 @@ export default function Chat() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [error, setError] = useState("");
   const messagesEndRef = useRef(null);
-  const pollingRef = useRef(null);
+
+  // ─── New Conversation Modal ────────────────────────────
+  const [showModal, setShowModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [startingChat, setStartingChat] = useState(false);
+  const searchTimeoutRef = useRef(null);
 
   // ─── Fetch Conversations ───────────────────────────────
   const fetchConversations = async () => {
@@ -48,19 +63,30 @@ export default function Chat() {
     setMessages([]);
     setLoadingMessages(true);
     fetchMessages(convo._id);
-
-    if (pollingRef.current) clearInterval(pollingRef.current);
-    pollingRef.current = setInterval(() => {
-      fetchMessages(convo._id);
-      fetchConversations();
-    }, 3000);
+    markAsSeen(convo._id);
   };
 
+  // ─── Socket.IO ─────────────────────────────────────────
   useEffect(() => {
+    // Listen for incoming messages
+    socket.on("receive_message", (message) => {
+      // Only add message if it belongs to the selected conversation
+      if (message.conversation === selectedConvo?._id) {
+        setMessages((prev) => {
+          // Avoid duplicates
+          const exists = prev.find((m) => m._id === message._id);
+          if (exists) return prev;
+          return [...prev, message];
+        });
+      }
+      // Always refresh conversations to update last message & unread count
+      fetchConversations();
+    });
+
     return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
+      socket.off("receive_message");
     };
-  }, []);
+  }, [selectedConvo]);
 
   // ─── Auto Scroll ───────────────────────────────────────
   useEffect(() => {
@@ -73,12 +99,70 @@ export default function Chat() {
     if (!text.trim() || !selectedConvo) return;
     try {
       const res = await sendMessage(selectedConvo._id, text.trim());
+      const newMessage = res.data.message;
       setMessages((prev) => [...prev, res.data.message]);
       setText("");
       fetchConversations();
+      socket.emit("send_message", newMessage);
     } catch (err) {
       setError("Failed to send message.");
     }
+  };
+
+  // ─── Search Users ──────────────────────────────────────
+  const handleSearch = (e) => {
+    const q = e.target.value;
+    setSearchQuery(q);
+
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    if (!q.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await searchUsers(q);
+        setSearchResults(res.data.users);
+      } catch (err) {
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 400);
+  };
+
+  // ─── Start New Conversation ────────────────────────────
+  const handleStartChat = async (userId) => {
+    setStartingChat(true);
+    try {
+      const res = await createDirectConversation(userId);
+      const newConvo = res.data.chat;
+      await fetchConversations();
+      // find the full convo from list and select it
+      setShowModal(false);
+      setSearchQuery("");
+      setSearchResults([]);
+      // Select after conversations reload
+      setTimeout(() => {
+        setConversations((prev) => {
+          const found = prev.find((c) => c._id === newConvo.id);
+          if (found) handleSelectConvo(found);
+          return prev;
+        });
+      }, 500);
+    } catch (err) {
+      setError("Failed to start conversation.");
+    } finally {
+      setStartingChat(false);
+    }
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSearchQuery("");
+    setSearchResults([]);
   };
 
   // ─── Helpers ───────────────────────────────────────────
@@ -91,7 +175,9 @@ export default function Chat() {
   const getLastMessage = (convo) => {
     if (!convo.lastMessage?.text) return "No messages yet";
     const label =
-      convo.lastMessage.sender?.username === user.username ? "You" : convo.lastMessage.sender?.username;
+      convo.lastMessage.sender?.username === user.username
+        ? "You"
+        : convo.lastMessage.sender?.username;
     return `${label}: ${convo.lastMessage.text}`;
   };
 
@@ -104,11 +190,76 @@ export default function Chat() {
   };
 
   const isOwn = (msg) => msg.sender?._id === user.id;
-
   const getInitial = (convo) => getConvoName(convo)?.[0]?.toUpperCase() || "?";
 
   return (
     <div className="h-screen flex overflow-hidden" style={{ background: "#fff5f0" }}>
+
+      {/* ─── New Conversation Modal ───────────────────── */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ background: "rgba(0,0,0,0.3)" }}
+          onClick={closeModal}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-extrabold text-gray-800">New Message</h2>
+              <button
+                onClick={closeModal}
+                className="text-gray-300 hover:text-gray-500 text-xl font-bold transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Search Input */}
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={handleSearch}
+              placeholder="Search by name or username..."
+              autoFocus
+              className="border-2 border-orange-100 bg-orange-50 rounded-2xl px-4 py-3 text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:border-orange-400 transition"
+            />
+
+            {/* Results */}
+            <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+              {searching ? (
+                <p className="text-sm text-gray-300 text-center py-4">Searching...</p>
+              ) : searchResults.length === 0 && searchQuery.trim() ? (
+                <p className="text-sm text-gray-300 text-center py-4">No users found.</p>
+              ) : (
+                searchResults.map((u) => (
+                  <button
+                    key={u._id}
+                    onClick={() => handleStartChat(u._id)}
+                    disabled={startingChat}
+                    className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-orange-50 transition text-left disabled:opacity-50"
+                  >
+                    {/* Avatar */}
+                    <div
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
+                      style={{ background: "linear-gradient(135deg, #ff6b6b, #ff8e53)" }}
+                    >
+                      {u.username?.[0]?.toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-800">@{u.username}</p>
+                      <p className="text-xs text-gray-400">
+                        {u.firstName} {u.lastName}
+                      </p>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─── Sidebar ─────────────────────────────────── */}
       <div className="w-80 flex flex-col shrink-0 bg-white shadow-lg rounded-r-3xl overflow-hidden">
@@ -130,11 +281,18 @@ export default function Chat() {
           </button>
         </div>
 
-        {/* Conversations Label */}
-        <div className="px-6 py-4">
+        {/* Conversations Label + New Button */}
+        <div className="px-6 py-4 flex items-center justify-between">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
             Conversations
           </p>
+          <button
+            onClick={() => setShowModal(true)}
+            className="text-white text-xs font-bold px-3 py-1.5 rounded-full shadow transition hover:scale-105 active:scale-95"
+            style={{ background: "linear-gradient(135deg, #ff6b6b, #ff8e53)" }}
+          >
+            + New
+          </button>
         </div>
 
         {/* Conversation List */}
@@ -241,14 +399,11 @@ export default function Chat() {
                       isOwn(msg) ? "self-end items-end" : "self-start items-start"
                     }`}
                   >
-                    {/* Sender name for group chats */}
                     {selectedConvo.isGroup && !isOwn(msg) && (
                       <p className="text-xs font-semibold px-1" style={{ color: "#ff8e53" }}>
                         {msg.sender?.username}
                       </p>
                     )}
-
-                    {/* Bubble */}
                     <div
                       className={`px-4 py-3 rounded-3xl text-sm leading-relaxed shadow-sm ${
                         isOwn(msg)
@@ -263,8 +418,6 @@ export default function Chat() {
                     >
                       {msg.text}
                     </div>
-
-                    {/* Timestamp */}
                     <p className="text-xs text-gray-300 px-1">
                       {formatTime(msg.createdAt)}
                     </p>
@@ -302,13 +455,19 @@ export default function Chat() {
             </form>
           </>
         ) : (
-          /* Empty State */
           <div className="flex-1 flex flex-col items-center justify-center gap-4">
             <div className="text-6xl">💬</div>
             <p className="text-xl font-extrabold text-gray-700">Your Messages</p>
             <p className="text-sm text-gray-400">
-              Pick a conversation and start chatting!
+              Pick a conversation or start a new one!
             </p>
+            <button
+              onClick={() => setShowModal(true)}
+              className="text-white font-bold text-sm px-6 py-3 rounded-full shadow-md transition hover:scale-105 active:scale-95 mt-2"
+              style={{ background: "linear-gradient(135deg, #ff6b6b, #ff8e53)" }}
+            >
+              + New Conversation
+            </button>
           </div>
         )}
       </div>

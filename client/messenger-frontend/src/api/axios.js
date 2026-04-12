@@ -1,4 +1,5 @@
 import axios from "axios";
+import { io } from "socket.io-client";
 
 const api = axios.create({
   baseURL: 'http://localhost:3001/api',
@@ -26,5 +27,11 @@ export const getMessages = (conversationId) =>
 
 export const sendMessage = (conversationId, text) =>
   api.post("/messages/sendMessage", { conversationId, text });
+
+export const searchUsers = (query) =>
+  api.get(`/users/search?query=${query}`);
+
+export const markAsSeen = (conversationId) =>
+  api.patch(`/messages/${conversationId}/seen`);
 
 export default api;
