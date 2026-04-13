@@ -59,17 +59,25 @@ export default function Chat() {
 
   // ─── Select Conversation ───────────────────────────────
   const handleSelectConvo = (convo) => {
+
+    if (selectedConvo) {
+      socket.emit("leave_room", selectedConvo._id);
+    }
+
     setSelectedConvo(convo);
     setMessages([]);
     setLoadingMessages(true);
     fetchMessages(convo._id);
     markAsSeen(convo._id);
+
+    socket.emit("join_room", convo._id);
   };
 
   // ─── Socket.IO ─────────────────────────────────────────
   useEffect(() => {
     // Listen for incoming messages
     socket.on("receive_message", (message) => {
+      console.log("📩 receive_message fired:", message);
       // Only add message if it belongs to the selected conversation
       if (message.conversation === selectedConvo?._id) {
         setMessages((prev) => {
@@ -88,22 +96,63 @@ export default function Chat() {
     };
   }, [selectedConvo]);
 
+  useEffect(() => {
+    if (user) {
+      socket.emit("join_user_room", user.id);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    socket.on("connect", () => console.log("✅ Socket connected:", socket.id));
+    socket.on("disconnect", () => console.log("❌ Socket disconnected"));
+  }, []);
+
   // ─── Auto Scroll ───────────────────────────────────────
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ─── Send Message ──────────────────────────────────────
+  // ─── Notification Listener ─────────────────────────────
+  useEffect(() => {
+    socket.on("new_notification", ({ conversationId, message }) => {
+      console.log("🔔 new_notification fired:", { conversationId, message });
+      // Update unread count in sidebar
+      setConversations((prev) =>
+        prev.map((c) =>
+          c._id === conversationId
+            ? { ...c, unreadCount: (c.unreadCount || 0) + 1, lastMessage: message }
+            : c
+        )
+      );
+    });
+
+    return () => {
+      socket.off("new_notification");
+    };
+  }, []);
+
+
   const handleSend = async (e) => {
     e.preventDefault();
     if (!text.trim() || !selectedConvo) return;
     try {
       const res = await sendMessage(selectedConvo._id, text.trim());
       const newMessage = res.data.message;
-      setMessages((prev) => [...prev, res.data.message]);
+      setMessages((prev) => [...prev, newMessage]);
       setText("");
       fetchConversations();
-      socket.emit("send_message", newMessage);
+
+      // Get recipient IDs (everyone in convo except sender)
+      const recipientIds = selectedConvo.members
+        .filter((m) => m._id !== user.id)
+        .map((m) => m._id);
+        
+      console.log("📤 Emitting send_message:", { recipientIds, conversation: selectedConvo._id });
+      socket.emit("send_message", {
+        ...newMessage,
+        conversation: selectedConvo._id,
+        recipientIds,
+      });
     } catch (err) {
       setError("Failed to send message.");
     }
@@ -310,11 +359,10 @@ export default function Chat() {
               <button
                 key={convo._id}
                 onClick={() => handleSelectConvo(convo)}
-                className={`w-full text-left px-4 py-3 rounded-2xl flex items-center gap-3 transition ${
-                  selectedConvo?._id === convo._id
-                    ? "bg-orange-50 border-2 border-orange-300"
-                    : "hover:bg-gray-50 border-2 border-transparent"
-                }`}
+                className={`w-full text-left px-4 py-3 rounded-2xl flex items-center gap-3 transition ${selectedConvo?._id === convo._id
+                  ? "bg-orange-50 border-2 border-orange-300"
+                  : "hover:bg-gray-50 border-2 border-transparent"
+                  }`}
               >
                 {/* Avatar */}
                 <div
@@ -395,9 +443,8 @@ export default function Chat() {
                 messages.map((msg) => (
                   <div
                     key={msg._id}
-                    className={`flex flex-col gap-1 max-w-sm ${
-                      isOwn(msg) ? "self-end items-end" : "self-start items-start"
-                    }`}
+                    className={`flex flex-col gap-1 max-w-sm ${isOwn(msg) ? "self-end items-end" : "self-start items-start"
+                      }`}
                   >
                     {selectedConvo.isGroup && !isOwn(msg) && (
                       <p className="text-xs font-semibold px-1" style={{ color: "#ff8e53" }}>
@@ -405,11 +452,10 @@ export default function Chat() {
                       </p>
                     )}
                     <div
-                      className={`px-4 py-3 rounded-3xl text-sm leading-relaxed shadow-sm ${
-                        isOwn(msg)
-                          ? "text-white rounded-br-sm"
-                          : "bg-white text-gray-800 rounded-bl-sm"
-                      }`}
+                      className={`px-4 py-3 rounded-3xl text-sm leading-relaxed shadow-sm ${isOwn(msg)
+                        ? "text-white rounded-br-sm"
+                        : "bg-white text-gray-800 rounded-bl-sm"
+                        }`}
                       style={
                         isOwn(msg)
                           ? { background: "linear-gradient(135deg, #ff6b6b, #ff8e53)" }
