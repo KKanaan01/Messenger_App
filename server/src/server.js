@@ -13,17 +13,39 @@ const app = require("./app");
 const server = http.createServer(app);
 
 // SOCKET IO SET UP
-const io = new Server(server , {
-    cors: {
-        origin: "*"
-    }
+const io = new Server(server, {
+  cors: {
+    origin: "*"
+  }
 });
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
+  socket.on("join_user_room", (userId) => {
+    socket.join(userId);
+    console.log(`User ${userId} joined their personal room`);
+  });
+
+
+  socket.on("join_room", (conversationId) => {
+    socket.join(conversationId);
+  });
+
+  socket.on("leave_room", (conversationId) => {
+    socket.leave(conversationId);
+  });
+
   socket.on("send_message", (message) => {
-    io.emit("receive_message", message);
+    console.log("📨 Server received send_message:", message.conversation); 
+    io.to(message.conversation).emit("receive_message", message);
+
+    message.recipientIds.forEach((recipientId) => {
+      io.to(recipientId).emit("new_notification", {
+        conversationId: message.conversation,
+        message,
+      });
+    });
   });
 
   socket.on("disconnect", () => {
@@ -40,6 +62,6 @@ async function start() {
 }
 
 start().catch((err) => {
-  console.error("Start up failed" , err);
+  console.error("Start up failed", err);
   process.exit(1);
 })

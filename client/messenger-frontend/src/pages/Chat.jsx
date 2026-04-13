@@ -45,6 +45,27 @@ export default function Chat() {
     fetchConversations();
   }, []);
 
+  // ─── Join Personal Room on Mount ──────────────────────
+  useEffect(() => {
+    if (user) {
+      socket.emit("join_user_room", user.id);
+      console.log("🏠 Joined personal room:", user.id);
+    }
+  }, [user]);
+
+  // ─── Socket Debug ──────────────────────────────────────
+  useEffect(() => {
+    socket.on("connect", () => console.log("✅ Socket connected:", socket.id));
+    socket.on("disconnect", () => console.log("❌ Socket disconnected"));
+  }, []);
+
+  // ─── Request Notification Permission ──────────────────
+  useEffect(() => {
+    if (Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
+
   // ─── Fetch Messages ────────────────────────────────────
   const fetchMessages = async (conversationId) => {
     try {
@@ -59,35 +80,28 @@ export default function Chat() {
 
   // ─── Select Conversation ───────────────────────────────
   const handleSelectConvo = (convo) => {
-
     if (selectedConvo) {
       socket.emit("leave_room", selectedConvo._id);
     }
-
     setSelectedConvo(convo);
     setMessages([]);
     setLoadingMessages(true);
     fetchMessages(convo._id);
     markAsSeen(convo._id);
-
     socket.emit("join_room", convo._id);
   };
 
-  // ─── Socket.IO ─────────────────────────────────────────
+  // ─── Socket.IO Receive Message ─────────────────────────
   useEffect(() => {
-    // Listen for incoming messages
     socket.on("receive_message", (message) => {
       console.log("📩 receive_message fired:", message);
-      // Only add message if it belongs to the selected conversation
       if (message.conversation === selectedConvo?._id) {
         setMessages((prev) => {
-          // Avoid duplicates
           const exists = prev.find((m) => m._id === message._id);
           if (exists) return prev;
           return [...prev, message];
         });
       }
-      // Always refresh conversations to update last message & unread count
       fetchConversations();
     });
 
@@ -96,27 +110,12 @@ export default function Chat() {
     };
   }, [selectedConvo]);
 
-  useEffect(() => {
-    if (user) {
-      socket.emit("join_user_room", user.id);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    socket.on("connect", () => console.log("✅ Socket connected:", socket.id));
-    socket.on("disconnect", () => console.log("❌ Socket disconnected"));
-  }, []);
-
-  // ─── Auto Scroll ───────────────────────────────────────
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
   // ─── Notification Listener ─────────────────────────────
   useEffect(() => {
     socket.on("new_notification", ({ conversationId, message }) => {
       console.log("🔔 new_notification fired:", { conversationId, message });
-      // Update unread count in sidebar
+
+      // Update unread count + last message in sidebar
       setConversations((prev) =>
         prev.map((c) =>
           c._id === conversationId
@@ -124,13 +123,27 @@ export default function Chat() {
             : c
         )
       );
+
+      // Don't notify if already in that conversation
+      if (selectedConvo?._id === conversationId) return;
+
+      // Browser notification
+      if (Notification.permission === "granted") {
+        new Notification(`💬 ${message.sender?.username}`, {
+          body: message.text,
+        });
+      }
     });
 
     return () => {
       socket.off("new_notification");
     };
-  }, []);
+  }, [selectedConvo]);
 
+  // ─── Auto Scroll ───────────────────────────────────────
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -142,17 +155,21 @@ export default function Chat() {
       setText("");
       fetchConversations();
 
-      // Get recipient IDs (everyone in convo except sender)
       const recipientIds = selectedConvo.members
         .filter((m) => m._id !== user.id)
         .map((m) => m._id);
-        
-      console.log("📤 Emitting send_message:", { recipientIds, conversation: selectedConvo._id });
+
+      // ✅ Don't spread newMessage, build the payload cleanly
       socket.emit("send_message", {
-        ...newMessage,
-        conversation: selectedConvo._id,
+        _id: newMessage._id,
+        text: newMessage.text,
+        sender: newMessage.sender,
+        conversation: selectedConvo._id, // ← string ID, matches the room key
         recipientIds,
+        createdAt: newMessage.createdAt,
       });
+
+      console.log("📤 Emitting send_message:", { recipientIds, conversation: selectedConvo._id });
     } catch (err) {
       setError("Failed to send message.");
     }
@@ -189,11 +206,9 @@ export default function Chat() {
       const res = await createDirectConversation(userId);
       const newConvo = res.data.chat;
       await fetchConversations();
-      // find the full convo from list and select it
       setShowModal(false);
       setSearchQuery("");
       setSearchResults([]);
-      // Select after conversations reload
       setTimeout(() => {
         setConversations((prev) => {
           const found = prev.find((c) => c._id === newConvo.id);
@@ -246,7 +261,8 @@ export default function Chat() {
 
       {/* ─── New Conversation Modal ───────────────────── */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4"
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
           style={{ background: "rgba(0,0,0,0.3)" }}
           onClick={closeModal}
         >
@@ -254,7 +270,6 @@ export default function Chat() {
             className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-extrabold text-gray-800">New Message</h2>
               <button
@@ -264,8 +279,6 @@ export default function Chat() {
                 ✕
               </button>
             </div>
-
-            {/* Search Input */}
             <input
               type="text"
               value={searchQuery}
@@ -274,8 +287,6 @@ export default function Chat() {
               autoFocus
               className="border-2 border-orange-100 bg-orange-50 rounded-2xl px-4 py-3 text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:border-orange-400 transition"
             />
-
-            {/* Results */}
             <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
               {searching ? (
                 <p className="text-sm text-gray-300 text-center py-4">Searching...</p>
@@ -289,7 +300,6 @@ export default function Chat() {
                     disabled={startingChat}
                     className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-orange-50 transition text-left disabled:opacity-50"
                   >
-                    {/* Avatar */}
                     <div
                       className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
                       style={{ background: "linear-gradient(135deg, #ff6b6b, #ff8e53)" }}
@@ -298,9 +308,7 @@ export default function Chat() {
                     </div>
                     <div>
                       <p className="text-sm font-bold text-gray-800">@{u.username}</p>
-                      <p className="text-xs text-gray-400">
-                        {u.firstName} {u.lastName}
-                      </p>
+                      <p className="text-xs text-gray-400">{u.firstName} {u.lastName}</p>
                     </div>
                   </button>
                 ))
@@ -312,8 +320,6 @@ export default function Chat() {
 
       {/* ─── Sidebar ─────────────────────────────────── */}
       <div className="w-80 flex flex-col shrink-0 bg-white shadow-lg rounded-r-3xl overflow-hidden">
-
-        {/* Header */}
         <div
           className="px-6 py-5 flex items-center justify-between"
           style={{ background: "linear-gradient(135deg, #ff6b6b, #ff8e53)" }}
@@ -330,7 +336,6 @@ export default function Chat() {
           </button>
         </div>
 
-        {/* Conversations Label + New Button */}
         <div className="px-6 py-4 flex items-center justify-between">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
             Conversations
@@ -344,7 +349,6 @@ export default function Chat() {
           </button>
         </div>
 
-        {/* Conversation List */}
         <div className="flex-1 overflow-y-auto px-3 pb-4 flex flex-col gap-1">
           {loadingConvos ? (
             <div className="flex items-center justify-center h-32">
@@ -360,19 +364,16 @@ export default function Chat() {
                 key={convo._id}
                 onClick={() => handleSelectConvo(convo)}
                 className={`w-full text-left px-4 py-3 rounded-2xl flex items-center gap-3 transition ${selectedConvo?._id === convo._id
-                  ? "bg-orange-50 border-2 border-orange-300"
-                  : "hover:bg-gray-50 border-2 border-transparent"
+                    ? "bg-orange-50 border-2 border-orange-300"
+                    : "hover:bg-gray-50 border-2 border-transparent"
                   }`}
               >
-                {/* Avatar */}
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
                   style={{ background: "linear-gradient(135deg, #ff6b6b, #ff8e53)" }}
                 >
                   {getInitial(convo)}
                 </div>
-
-                {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-bold text-gray-800 truncate">
@@ -406,7 +407,6 @@ export default function Chat() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {selectedConvo ? (
           <>
-            {/* Chat Header */}
             <div className="px-6 py-4 bg-white shadow-sm flex items-center gap-4">
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
@@ -426,7 +426,6 @@ export default function Chat() {
               </div>
             </div>
 
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-4">
               {loadingMessages ? (
                 <div className="flex items-center justify-center h-full">
@@ -453,8 +452,8 @@ export default function Chat() {
                     )}
                     <div
                       className={`px-4 py-3 rounded-3xl text-sm leading-relaxed shadow-sm ${isOwn(msg)
-                        ? "text-white rounded-br-sm"
-                        : "bg-white text-gray-800 rounded-bl-sm"
+                          ? "text-white rounded-br-sm"
+                          : "bg-white text-gray-800 rounded-bl-sm"
                         }`}
                       style={
                         isOwn(msg)
@@ -473,12 +472,10 @@ export default function Chat() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Error */}
             {error && (
               <p className="text-xs text-red-400 text-center mb-2">{error}</p>
             )}
 
-            {/* Message Input */}
             <form
               onSubmit={handleSend}
               className="px-6 py-4 bg-white shadow-inner flex items-center gap-3"
