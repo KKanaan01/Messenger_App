@@ -30,129 +30,122 @@ export default function Register() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4 py-16"
-      style={{ background: "linear-gradient(135deg, #ff6b6b 0%, #ff8e53 40%, #ff6b9d 100%)" }}
+      className="min-h-screen flex items-center justify-center px-4 py-10"
+      style={{ background: "#f5f4fa" }}
     >
-      <div className="w-full max-w-md bg-white/90 backdrop-blur-sm rounded-3xl px-10 pt-10 pb-12 shadow-2xl">
-
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">
+      <div
+        className="w-full max-w-md bg-white rounded-3xl p-8 shadow-xl flex flex-col gap-6"
+        style={{ border: "0.5px solid #e2e0f0" }}
+      >
+        {/* Header */}
+        <div className="text-center">
+          <h1
+            className="text-xl font-semibold tracking-tight"
+            style={{ color: "#3b2f8f" }}
+          >
             Messenger
           </h1>
-          <p className="text-gray-400 text-sm mt-2">
-            Create your account and start chatting! 
+          <p className="text-xs text-gray-400 mt-1">
+            Create your account
           </p>
         </div>
 
         {/* Error */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-500 text-sm rounded-2xl px-4 py-3 mb-6 text-center">
+          <div className="text-xs text-red-400 text-center">
             {error}
           </div>
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
-          {/* First & Last Name */}
-          <div className="flex gap-4">
-            <div className="flex flex-col gap-2 flex-1">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                First Name
-              </label>
-              <input
-                name="firstName"
-                placeholder="John"
-                value={form.firstName}
-                onChange={handleChange}
-                required
-                className="border-2 border-orange-100 bg-orange-50 rounded-2xl px-4 py-3 text-gray-800 placeholder-gray-300 focus:outline-none focus:border-orange-400 transition text-sm"
-              />
-            </div>
-            <div className="flex flex-col gap-2 flex-1">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                Last Name
-              </label>
-              <input
-                name="lastName"
-                placeholder="Doe"
-                value={form.lastName}
-                onChange={handleChange}
-                required
-                className="border-2 border-orange-200 bg-orange-50 rounded-2xl px-3 py-3 text-gray-800 placeholder-gray-300 focus:outline-none focus:border-orange-400 transition text-sm w-full min-w-0"
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-              Username
-            </label>
+          <div className="flex gap-3">
             <input
-              name="username"
-              placeholder="johndoe"
-              value={form.username}
+              name="firstName"
+              placeholder="First name"
+              value={form.firstName}
               onChange={handleChange}
               required
-              className="border-2 border-orange-100 bg-orange-50 rounded-2xl px-4 py-3 text-gray-800 placeholder-gray-300 focus:outline-none focus:border-orange-400 transition text-sm"
+              className="flex-1 min-w-0 rounded-xl px-4 py-2.5 text-sm text-gray-800 placeholder-gray-300 focus:outline-none transition"
+              style={{
+                background: "#f5f4fa",
+                border: "0.5px solid #e2e0f0",
+              }}
+            />
+
+            <input
+              name="lastName"
+              placeholder="Last name"
+              value={form.lastName}
+              onChange={handleChange}
+              required
+              className="flex-1 min-w-0 rounded-xl px-4 py-2.5 text-sm text-gray-800 placeholder-gray-300 focus:outline-none transition"
+              style={{
+                background: "#f5f4fa",
+                border: "0.5px solid #e2e0f0",
+              }}
             />
           </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-              Email
-            </label>
-            <input
-              name="email"
-              type="email"
-              placeholder="john@example.com"
-              value={form.email}
-              onChange={handleChange}
-              required
-              className="border-2 border-orange-100 bg-orange-50 rounded-2xl px-4 py-3 text-gray-800 placeholder-gray-300 focus:outline-none focus:border-orange-400 transition text-sm"
-            />
-          </div>
+          <input
+            name="username"
+            placeholder="Username"
+            value={form.username}
+            onChange={handleChange}
+            required
+            className="rounded-xl px-4 py-2.5 text-sm text-gray-800 placeholder-gray-300 focus:outline-none transition"
+            style={{
+              background: "#f5f4fa",
+              border: "0.5px solid #e2e0f0",
+            }}
+          />
 
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-              Password
-            </label>
-            <input
-              name="password"
-              type="password"
-              placeholder="Create a password"
-              value={form.password}
-              onChange={handleChange}
-              required
-              className="border-2 border-orange-100 bg-orange-50 rounded-2xl px-4 py-3 text-gray-800 placeholder-gray-300 focus:outline-none focus:border-orange-400 transition text-sm"
-            />
-          </div>
+          <input
+            name="email"
+            type="email"
+            placeholder="Email"
+            value={form.email}
+            onChange={handleChange}
+            required
+            className="rounded-xl px-4 py-2.5 text-sm text-gray-800 placeholder-gray-300 focus:outline-none transition"
+            style={{
+              background: "#f5f4fa",
+              border: "0.5px solid #e2e0f0",
+            }}
+          />
+
+          <input
+            name="password"
+            type="password"
+            placeholder="Password"
+            value={form.password}
+            onChange={handleChange}
+            required
+            className="rounded-xl px-4 py-2.5 text-sm text-gray-800 placeholder-gray-300 focus:outline-none transition"
+            style={{
+              background: "#f5f4fa",
+              border: "0.5px solid #e2e0f0",
+            }}
+          />
 
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 py-3 rounded-2xl text-white font-bold text-sm tracking-wide shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition hover:scale-[1.02] active:scale-95"
-            style={{ background: "linear-gradient(135deg, #ff6b6b, #ff8e53)" }}
+            className="mt-2 text-white text-sm font-medium py-2.5 rounded-full transition disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90"
+            style={{ background: "#3b2f8f" }}
           >
-            {loading ? "Creating account..." : "Create Account"}
+            {loading ? "Creating..." : "Create Account"}
           </button>
         </form>
 
-        {/* Divider */}
-        <div className="flex items-center gap-4 my-6">
-          <div className="flex-1 h-px bg-gray-100" />
-          <span className="text-xs text-gray-300 font-medium">OR</span>
-          <div className="flex-1 h-px bg-gray-100" />
-        </div>
-
         {/* Footer */}
-        <p className="text-center text-sm text-gray-400">
+        <p className="text-center text-xs text-gray-400">
           Already have an account?{" "}
           <Link
             to="/login"
-            className="font-bold hover:underline"
-            style={{ color: "#ff6b6b" }}
+            className="font-medium hover:underline"
+            style={{ color: "#3b2f8f" }}
           >
             Sign In
           </Link>

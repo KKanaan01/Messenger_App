@@ -37,8 +37,13 @@ io.on("connection", (socket) => {
   });
 
   socket.on("send_message", (message) => {
-    console.log("📨 Server received send_message:", message.conversation); 
-    io.to(message.conversation).emit("receive_message", message);
+    console.log("📨 Server received send_message:", message.conversation);
+    console.log("📨 Conversation ID:", message.conversation);
+
+    const room = io.sockets.adapter.rooms.get(message.conversation);
+    console.log("   sockets in room:", room ? [...room] : "EMPTY/NO ROOM");
+
+    socket.to(message.conversation).emit("receive_message", message);
 
     message.recipientIds.forEach((recipientId) => {
       io.to(recipientId).emit("new_notification", {
@@ -48,11 +53,18 @@ io.on("connection", (socket) => {
     });
   });
 
+  socket.on("typing", ({ conversationId, username }) => {
+    socket.to(conversationId).emit("typing", { username });
+  });
+
+  socket.on("stop_typing", ({ conversationId }) => {
+    socket.to(conversationId).emit("stop_typing");
+  });
+
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
   });
 });
-
 async function start() {
   await connectDB();
 
